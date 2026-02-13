@@ -117,11 +117,11 @@ static const match_table_t tokens = {
 	{Opt_uid, "uid=%u"},
 	{Opt_gid, "gid=%u"},
 	{Opt_mode, "mode=%o"},
-#ifdef CONFIG_DEVPTS_MULTIPLE_INSTANCES
+	#ifdef CONFIG_DEVPTS_MULTIPLE_INSTANCES
 	{Opt_ptmxmode, "ptmxmode=%o"},
 	{Opt_newinstance, "newinstance"},
 	{Opt_max, "max=%d"},
-#endif
+	#endif
 	{Opt_err, NULL}
 };
 
@@ -139,10 +139,10 @@ static inline struct pts_fs_info *DEVPTS_SB(struct super_block *sb)
 
 static inline struct super_block *pts_sb_from_inode(struct inode *inode)
 {
-#ifdef CONFIG_DEVPTS_MULTIPLE_INSTANCES
+	#ifdef CONFIG_DEVPTS_MULTIPLE_INSTANCES
 	if (inode->i_sb->s_magic == DEVPTS_SUPER_MAGIC)
 		return inode->i_sb;
-#endif
+	#endif
 	if (!devpts_mnt)
 		return NULL;
 	return devpts_mnt->mnt_sb;
@@ -188,50 +188,50 @@ static int parse_mount_options(char *data, int op, struct pts_mount_opts *opts)
 
 		token = match_token(p, tokens, args);
 		switch (token) {
-		case Opt_uid:
-			if (match_int(&args[0], &option))
-				return -EINVAL;
+			case Opt_uid:
+				if (match_int(&args[0], &option))
+					return -EINVAL;
 			uid = make_kuid(current_user_ns(), option);
 			if (!uid_valid(uid))
 				return -EINVAL;
 			opts->uid = uid;
 			opts->setuid = 1;
 			break;
-		case Opt_gid:
-			if (match_int(&args[0], &option))
-				return -EINVAL;
+			case Opt_gid:
+				if (match_int(&args[0], &option))
+					return -EINVAL;
 			gid = make_kgid(current_user_ns(), option);
 			if (!gid_valid(gid))
 				return -EINVAL;
 			opts->gid = gid;
 			opts->setgid = 1;
 			break;
-		case Opt_mode:
-			if (match_octal(&args[0], &option))
-				return -EINVAL;
+			case Opt_mode:
+				if (match_octal(&args[0], &option))
+					return -EINVAL;
 			opts->mode = option & S_IALLUGO;
 			break;
-#ifdef CONFIG_DEVPTS_MULTIPLE_INSTANCES
-		case Opt_ptmxmode:
-			if (match_octal(&args[0], &option))
-				return -EINVAL;
+			#ifdef CONFIG_DEVPTS_MULTIPLE_INSTANCES
+			case Opt_ptmxmode:
+				if (match_octal(&args[0], &option))
+					return -EINVAL;
 			opts->ptmxmode = option & S_IALLUGO;
 			break;
-		case Opt_newinstance:
-			/* newinstance makes sense only on initial mount */
-			if (op == PARSE_MOUNT)
-				opts->newinstance = 1;
+			case Opt_newinstance:
+				/* newinstance makes sense only on initial mount */
+				if (op == PARSE_MOUNT)
+					opts->newinstance = 1;
 			break;
-		case Opt_max:
-			if (match_int(&args[0], &option) ||
-			    option < 0 || option > NR_UNIX98_PTY_MAX)
+			case Opt_max:
+				if (match_int(&args[0], &option) ||
+					option < 0 || option > NR_UNIX98_PTY_MAX)
+					return -EINVAL;
+				opts->max = option;
+				break;
+				#endif
+			default:
+				pr_err("called with bogus options\n");
 				return -EINVAL;
-			opts->max = option;
-			break;
-#endif
-		default:
-			pr_err("called with bogus options\n");
-			return -EINVAL;
 		}
 	}
 
@@ -292,7 +292,7 @@ static int mknod_ptmx(struct super_block *sb)
 
 	fsi->ptmx_dentry = dentry;
 	rc = 0;
-out:
+	out:
 	mutex_unlock(&d_inode(root)->i_mutex);
 	return rc;
 }
@@ -339,16 +339,16 @@ static int devpts_show_options(struct seq_file *seq, struct dentry *root)
 
 	if (opts->setuid)
 		seq_printf(seq, ",uid=%u",
-			   from_kuid_munged(&init_user_ns, opts->uid));
-	if (opts->setgid)
-		seq_printf(seq, ",gid=%u",
-			   from_kgid_munged(&init_user_ns, opts->gid));
-	seq_printf(seq, ",mode=%03o", opts->mode);
-#ifdef CONFIG_DEVPTS_MULTIPLE_INSTANCES
-	seq_printf(seq, ",ptmxmode=%03o", opts->ptmxmode);
+				   from_kuid_munged(&init_user_ns, opts->uid));
+		if (opts->setgid)
+			seq_printf(seq, ",gid=%u",
+					   from_kgid_munged(&init_user_ns, opts->gid));
+			seq_printf(seq, ",mode=%03o", opts->mode);
+		#ifdef CONFIG_DEVPTS_MULTIPLE_INSTANCES
+		seq_printf(seq, ",ptmxmode=%03o", opts->ptmxmode);
 	if (opts->max < NR_UNIX98_PTY_MAX)
 		seq_printf(seq, ",max=%d", opts->max);
-#endif
+	#endif
 
 	return 0;
 }
@@ -406,7 +406,7 @@ devpts_fill_super(struct super_block *s, void *data, int silent)
 
 	pr_err("get root dentry failed\n");
 
-fail:
+	fail:
 	return -ENOMEM;
 }
 
@@ -446,7 +446,7 @@ static int compare_init_pts_sb(struct super_block *s, void *p)
  *     super-block instead of the initial super-block.
  */
 static struct dentry *devpts_mount(struct file_system_type *fs_type,
-	int flags, const char *dev_name, void *data)
+								   int flags, const char *dev_name, void *data)
 {
 	int error;
 	struct pts_mount_opts opts;
@@ -466,10 +466,10 @@ static struct dentry *devpts_mount(struct file_system_type *fs_type,
 		s = sget(fs_type, NULL, set_anon_super, flags, NULL);
 	else
 		s = sget(fs_type, compare_init_pts_sb, set_anon_super, flags,
-			 NULL);
+				 NULL);
 
-	if (IS_ERR(s))
-		return ERR_CAST(s);
+		if (IS_ERR(s))
+			return ERR_CAST(s);
 
 	if (!s->s_root) {
 		error = devpts_fill_super(s, data, flags & MS_SILENT ? 1 : 0);
@@ -486,7 +486,7 @@ static struct dentry *devpts_mount(struct file_system_type *fs_type,
 
 	return dget(s->s_root);
 
-out_undo_sget:
+	out_undo_sget:
 	deactivate_locked_super(s);
 	return ERR_PTR(error);
 }
@@ -497,7 +497,7 @@ out_undo_sget:
  * multiple-instance semantics)
  */
 static struct dentry *devpts_mount(struct file_system_type *fs_type, int flags,
-		const char *dev_name, void *data)
+								   const char *dev_name, void *data)
 {
 	return mount_single(fs_type, flags, data, devpts_fill_super);
 }
@@ -516,9 +516,9 @@ static struct file_system_type devpts_fs_type = {
 	.name		= "devpts",
 	.mount		= devpts_mount,
 	.kill_sb	= devpts_kill_sb,
-#ifdef CONFIG_DEVPTS_MULTIPLE_INSTANCES
+	#ifdef CONFIG_DEVPTS_MULTIPLE_INSTANCES
 	.fs_flags	= FS_USERNS_MOUNT | FS_USERNS_DEV_MOUNT,
-#endif
+	#endif
 };
 
 /*
@@ -534,33 +534,33 @@ int devpts_new_index(struct pts_fs_info *fsi)
 	if (!fsi)
 		return -ENODEV;
 
-retry:
+	retry:
 	if (!ida_pre_get(&fsi->allocated_ptys, GFP_KERNEL))
 		return -ENOMEM;
 
 	mutex_lock(&allocated_ptys_lock);
 	if (pty_count >= pty_limit -
-			(fsi->mount_opts.newinstance ? pty_reserve : 0)) {
+		(fsi->mount_opts.newinstance ? pty_reserve : 0)) {
 		mutex_unlock(&allocated_ptys_lock);
-		return -ENOSPC;
-	}
+	return -ENOSPC;
+		}
 
-	ida_ret = ida_get_new(&fsi->allocated_ptys, &index);
-	if (ida_ret < 0) {
-		mutex_unlock(&allocated_ptys_lock);
-		if (ida_ret == -EAGAIN)
-			goto retry;
-		return -EIO;
-	}
+		ida_ret = ida_get_new(&fsi->allocated_ptys, &index);
+		if (ida_ret < 0) {
+			mutex_unlock(&allocated_ptys_lock);
+			if (ida_ret == -EAGAIN)
+				goto retry;
+			return -EIO;
+		}
 
-	if (index >= fsi->mount_opts.max) {
-		ida_remove(&fsi->allocated_ptys, index);
+		if (index >= fsi->mount_opts.max) {
+			ida_remove(&fsi->allocated_ptys, index);
+			mutex_unlock(&allocated_ptys_lock);
+			return -ENOSPC;
+		}
+		pty_count++;
 		mutex_unlock(&allocated_ptys_lock);
-		return -ENOSPC;
-	}
-	pty_count++;
-	mutex_unlock(&allocated_ptys_lock);
-	return index;
+		return index;
 }
 
 void devpts_kill_index(struct pts_fs_info *fsi, int idx)
@@ -605,7 +605,7 @@ void devpts_put_ref(struct pts_fs_info *fsi)
  * The created inode is returned. Remove it from /dev/pts/ by devpts_pty_kill.
  */
 struct inode *devpts_pty_new(struct pts_fs_info *fsi, dev_t device, int index,
-		void *priv)
+							 void *priv)
 {
 	struct dentry *dentry;
 	struct super_block *sb;
